@@ -76,8 +76,18 @@ async function wxApi(path, method = "GET", body) {
     opts.headers = { "Content-Type": "application/json" };
     opts.body = JSON.stringify(body);
   }
-  const r = await fetch(url, opts);
-  return r.json();
+  let r = await fetch(url, opts);
+  let data = await r.json();
+  // 如果 token 过期，强制刷新再试一次
+  if (data.errcode === 40001 || data.errcode === 42001 || data.errcode === 40014) {
+    console.log("⚠️ token 过期，强制刷新");
+    if (fs.existsSync(TOKEN_FILE)) fs.unlinkSync(TOKEN_FILE);
+    const newToken = await getAccessToken();
+    const newUrl = `${WX_API}${path}${path.includes("?") ? "&" : "?"}access_token=${newToken}`;
+    r = await fetch(newUrl, opts);
+    data = await r.json();
+  }
+  return data;
 }
 
 async function uploadNewsImage(imageUrl) {
