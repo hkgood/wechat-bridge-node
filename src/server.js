@@ -210,6 +210,27 @@ app.post("/api/publish", async (req, res) => {
       try { thumb_media_id = await uploadNewsImage(thumb_url); } catch (e) { console.log("封面跳过:", e.message); }
     }
 
+    // 如果没传封面，上传一个默认封面（解决 40007 问题）
+    if (!thumb_media_id) {
+      try {
+        // 1x1 透明 PNG（最小合法图片）
+        const png1x1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
+        const token = await getAccessToken();
+        const form = new FormData();
+        form.append("media", new Blob([png1x1], { type: "image/png" }), "cover.png");
+        const r = await fetch(`${WX_API}/material/add_material?access_token=${token}&type=image`, { method: "POST", body: form });
+        const data = await r.json();
+        if (data.media_id) {
+          thumb_media_id = data.media_id;
+          console.log("✅ 默认封面上传成功:", thumb_media_id);
+        } else {
+          console.log("⚠️ 默认封面上传失败:", JSON.stringify(data));
+        }
+      } catch (e) {
+        console.log("默认封面上传异常:", e.message);
+      }
+    }
+
     if (audio_base64) {
       try { audio_media_id = await uploadAudio(audio_base64, audio_filename || "podcast.mp3"); } catch (e) { console.log("音频跳过:", e.message); }
     }
