@@ -1,0 +1,16 @@
+{
+  "name": "wechat-bridge-node",
+  "version": "1.0.0",
+  "description": "微信公众号中转服务（Node.js 版，可 Docker 部署到阿里云）",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  wechat-bridge:
+    build: .
+    container_name: wechat-bridge
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      # 微信公众号 AppID
+      - WX_APP_ID=wx357838b9bb8ad7ef
+      # 微信公众号 AppSecret（部署后建议在 1Panel 修改成加密环境变量）
+      - WX_APP_SECRET=63db4a61c06460df7ae44e81e02b499a
+      # Dashboard 登录密码
+      - ADMIN_PASSWORD=RockyReport2026
+      # 服务端口
+      - PORT=8080
+      # 数据持久化目录（容器内）
+      - DATA_DIR=/app/data
+    volumes:
+      # 历史记录持久化到宿主机
+      - ./data:/app/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
