@@ -205,7 +205,7 @@ app.get("/api/outbound-ip", async (req, res) => {
 // 3. 推送早报到草稿箱
 app.post("/api/publish", async (req, res) => {
   try {
-    const { title, content, audio_base64, audio_filename, thumb_url, digest } = req.body || {};
+    const { title, content, audio_base64, audio_filename, thumb_url, cover_base64, digest } = req.body || {};
     if (!title || !content) {
       return res.status(400).json({ error: "title 和 content 必填" });
     }
@@ -217,6 +217,27 @@ app.post("/api/publish", async (req, res) => {
 
     if (thumb_url) {
       try { thumb_media_id = await uploadNewsImage(thumb_url); } catch (e) { console.log("封面跳过:", e.message); }
+    }
+
+    // 优先：Mavis 生成的封面图（base64）
+    if (!thumb_media_id && cover_base64) {
+      try {
+        console.log("🔼 上传 Mavis 生成的封面...");
+        const coverBuffer = Buffer.from(cover_base64, 'base64');
+        const token = await getAccessToken();
+        const form = new FormData();
+        form.append("media", new Blob([coverBuffer], { type: "image/png" }), "cover.png");
+        const r = await fetch(`${WX_API}/material/add_material?access_token=${token}&type=image`, { method: "POST", body: form });
+        const data = await r.json();
+        if (data.media_id) {
+          thumb_media_id = data.media_id;
+          console.log("✅ Mavis 封面上传成功:", thumb_media_id);
+        } else {
+          console.log("⚠️ Mavis 封面上传失败:", JSON.stringify(data));
+        }
+      } catch (e) {
+        console.log("Mavis 封面上传异常:", e.message);
+      }
     }
 
     // 如果没传封面，上传一个默认封面（解决 40007 问题）
