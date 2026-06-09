@@ -213,6 +213,7 @@ app.post("/api/publish", async (req, res) => {
     // 如果没传封面，上传一个默认封面（解决 40007 问题）
     if (!thumb_media_id) {
       try {
+        console.log("🔼 开始上传默认封面...");
         // 1x1 透明 PNG（最小合法图片）
         const png1x1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
         const token = await getAccessToken();
@@ -220,6 +221,7 @@ app.post("/api/publish", async (req, res) => {
         form.append("media", new Blob([png1x1], { type: "image/png" }), "cover.png");
         const r = await fetch(`${WX_API}/material/add_material?access_token=${token}&type=image`, { method: "POST", body: form });
         const data = await r.json();
+        console.log("🔼 素材上传返回:", JSON.stringify(data));
         if (data.media_id) {
           thumb_media_id = data.media_id;
           console.log("✅ 默认封面上传成功:", thumb_media_id);
@@ -246,8 +248,11 @@ app.post("/api/publish", async (req, res) => {
       digest: (digest || content.replace(/<[^>]+>/g, "").slice(0, 100)).slice(0, 120),
       content: fullContent,
       content_source_url: "",
-      ...(thumb_media_id ? { thumb_media_id } : {}),
+      thumb_media_id: thumb_media_id || "",
     };
+    if (!thumb_media_id) {
+      console.log("⚠️ 警告: thumb_media_id 为空，可能导致 40007");
+    }
     console.log("📰 草稿 article:", JSON.stringify({ ...article, content: article.content.slice(0, 80) + "..." }, null, 2));
     const media_id = await addDraft(article);
 
