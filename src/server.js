@@ -147,6 +147,21 @@ app.get("/healthz", (req, res) => {
   res.json({ ok: true, ts: Date.now(), ip: req.ip });
 });
 
+// 1.5 诊断接口（查看 access_token 是否有效）
+app.get("/api/debug", async (req, res) => {
+  try {
+    const r = await fetch(`${WX_API}/token?grant_type=client_credential&appid=${WX_APP_ID}&secret=${WX_APP_SECRET}`);
+    const data = await r.json();
+    res.json({
+      configured: { app_id: WX_APP_ID, has_secret: !!WX_APP_SECRET, secret_length: WX_APP_SECRET.length },
+      token_response: data,
+      hint: data.errcode ? "AppID 或 AppSecret 不对" : "AppID/Secret 有效",
+    });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
+});
+
 // 2. 查询本机公网 IP
 app.get("/api/outbound-ip", async (req, res) => {
   try {
