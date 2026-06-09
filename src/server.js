@@ -217,6 +217,7 @@ app.post("/api/publish", async (req, res) => {
       content_source_url: "",
       ...(thumb_media_id ? { thumb_media_id } : {}),
     };
+    console.log("📰 草稿 article:", JSON.stringify({ ...article, content: article.content.slice(0, 80) + "..." }, null, 2));
     const media_id = await addDraft(article);
 
     saveHistory({
