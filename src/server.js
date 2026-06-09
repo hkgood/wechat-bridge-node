@@ -56,14 +56,23 @@ async function getAccessToken() {
       if (cache.expire_at > Date.now() / 1000) return cache.access_token;
     } catch (e) {}
   }
-  // 拉新
-  const url = `${WX_API}/token?grant_type=client_credential&appid=${WX_APP_ID}&secret=${WX_APP_SECRET}`;
-  const r = await fetch(url);
+  // 使用新的 stable_token 接口（旧版 /cgi-bin/token 已被微信弃用）
+  const url = `${WX_API}/stable_token`;
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      appid: WX_APP_ID,
+      secret: WX_APP_SECRET,
+      grant_type: "client_credential",
+      force_refresh: false,
+    }),
+  });
   const data = await r.json();
   if (data.errcode) throw new Error(`获取 access_token 失败: ${JSON.stringify(data)}`);
   fs.writeFileSync(TOKEN_FILE, JSON.stringify({
     access_token: data.access_token,
-    expire_at: Math.floor(Date.now() / 1000) + 7000,
+    expire_at: Math.floor(Date.now() / 1000) + (data.expires_in || 7200) - 200,
   }));
   return data.access_token;
 }
