@@ -205,7 +205,7 @@ app.get("/api/outbound-ip", async (req, res) => {
 // 3. 推送早报到草稿箱
 app.post("/api/publish", async (req, res) => {
   try {
-    const { title, content, audio_base64, audio_filename, thumb_url, cover_base64, digest } = req.body || {};
+    const { title, content, audio_base64, audio_filename, thumb_url, cover_base64, cover_path, cover_url, digest } = req.body || {};
     if (!title || !content) {
       return res.status(400).json({ error: "title 和 content 必填" });
     }
@@ -237,6 +237,48 @@ app.post("/api/publish", async (req, res) => {
         }
       } catch (e) {
         console.log("Mavis 封面上传异常:", e.message);
+      }
+    }
+
+    // 或：服务器本地文件路径（适合定时任务场景，body 不超限）
+    if (!thumb_media_id && cover_path) {
+      try {
+        console.log("🔼 从本地路径读封面:", cover_path);
+        const fs = require('fs');
+        if (fs.existsSync(cover_path)) {
+          const coverBuffer = fs.readFileSync(cover_path);
+          const token = await getAccessToken();
+          const form = new FormData();
+          form.append("media", new Blob([coverBuffer], { type: "image/png" }), "cover.png");
+          const r = await fetch(`${WX_API}/material/add_material?access_token=${token}&type=image`, { method: "POST", body: form });
+          const data = await r.json();
+          if (data.media_id) {
+            thumb_media_id = data.media_id;
+            console.log("✅ 本地封面上传成功:", thumb_media_id);
+          }
+        }
+      } catch (e) {
+        console.log("本地封面上传异常:", e.message);
+      }
+    }
+
+    // 或：从 URL 下载
+    if (!thumb_media_id && cover_url) {
+      try {
+        console.log("🔼 从 URL 下载封面:", cover_url);
+        const r = await fetch(cover_url);
+        const coverBuffer = Buffer.from(await r.arrayBuffer());
+        const token = await getAccessToken();
+        const form = new FormData();
+        form.append("media", new Blob([coverBuffer], { type: "image/png" }), "cover.png");
+        const resp = await fetch(`${WX_API}/material/add_material?access_token=${token}&type=image`, { method: "POST", body: form });
+        const data = await resp.json();
+        if (data.media_id) {
+          thumb_media_id = data.media_id;
+          console.log("✅ URL 封面上传成功:", thumb_media_id);
+        }
+      } catch (e) {
+        console.log("URL 封面上传异常:", e.message);
       }
     }
 
